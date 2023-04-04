@@ -9,42 +9,65 @@ SPDX-License-Identifier: (BSD-3-Clause)
 #ifndef DESUL_ATOMICS_FECH_OP_HIP_HPP_
 #define DESUL_ATOMICS_FECH_OP_HIP_HPP_
 
+#include <desul/atomics/Adapt_HIP.hpp>
+
 namespace desul {
 namespace Impl {
 
+#define DESUL_IMPL_HIP_ATOMIC_FETCH_OP(OP, T)                           \
+  template <class MemoryOrder, class MemoryScope>                       \
+  __device__ inline T device_atomic_fetch_##OP(                         \
+      T* ptr, T val, MemoryOrder, MemoryScope) {                        \
+    return __hip_atomic_fetch_##OP(ptr,                                 \
+                                   val,                                 \
+                                   HIPMemoryOrder<MemoryOrder>::value,  \
+                                   HIPMemoryScope<MemoryScope>::value); \
+  }
+
+#define DESUL_IMPL_HIP_ATOMIC_FETCH_OP_INTEGRAL(OP) \
+  DESUL_IMPL_HIP_ATOMIC_FETCH_OP(OP, int)           \
+  DESUL_IMPL_HIP_ATOMIC_FETCH_OP(OP, long long)     \
+  DESUL_IMPL_HIP_ATOMIC_FETCH_OP(OP, unsigned int)  \
+  DESUL_IMPL_HIP_ATOMIC_FETCH_OP(OP, unsigned long long)
+
+#define DESUL_IMPL_HIP_ATOMIC_FETCH_OP_FLOATING_POINT(OP) \
+  DESUL_IMPL_HIP_ATOMIC_FETCH_OP(OP, float)               \
+  DESUL_IMPL_HIP_ATOMIC_FETCH_OP(OP, double)
+
+DESUL_IMPL_HIP_ATOMIC_FETCH_OP_INTEGRAL(add)
+DESUL_IMPL_HIP_ATOMIC_FETCH_OP_INTEGRAL(min)
+DESUL_IMPL_HIP_ATOMIC_FETCH_OP_INTEGRAL(max)
+DESUL_IMPL_HIP_ATOMIC_FETCH_OP_INTEGRAL(and)
+DESUL_IMPL_HIP_ATOMIC_FETCH_OP_INTEGRAL(or)
+DESUL_IMPL_HIP_ATOMIC_FETCH_OP_INTEGRAL(xor)
+DESUL_IMPL_HIP_ATOMIC_FETCH_OP_FLOATING_POINT(add)
+DESUL_IMPL_HIP_ATOMIC_FETCH_OP_FLOATING_POINT(min)
+DESUL_IMPL_HIP_ATOMIC_FETCH_OP_FLOATING_POINT(max)
+
+#undef DESUL_IMPL_HIP_ATOMIC_FETCH_OP_FLOATING_POINT
+#undef DESUL_IMPL_HIP_ATOMIC_FETCH_OP_INTEGRAL
+#undef DESUL_IMPL_HIP_ATOMIC_FETCH_OP
+
+#define DESUL_IMPL_HIP_ATOMIC_FETCH_SUB(T)                             \
+  template <class MemoryOrder class MemoryScope>                       \
+  __device__ inline T device_atomic_fetch_sub(                         \
+      T* ptr, T val, MemoryOrder, MemoryScope) {                       \
+    return __hip_atomic_fetch_add(ptr,                                 \
+                                  -val,                                \
+                                  HIPMemoryOrder<MemoryOrder>::value,  \
+                                  HIPMemoryScope<MemoryScope>::value); \
+  }
+
+DESUL_IMPL_HIP_ATOMIC_FETCH_SUB(int)
+DESUL_IMPL_HIP_ATOMIC_FETCH_SUB(long long)
+DESUL_IMPL_HIP_ATOMIC_FETCH_SUB(unsigned int)
+DESUL_IMPL_HIP_ATOMIC_FETCH_SUB(unsigned long long)
+DESUL_IMPL_HIP_ATOMIC_FETCH_SUB(float)
+DESUL_IMPL_HIP_ATOMIC_FETCH_SUB(double)
+
+#undef DESUL_IMPL_HIP_ATOMIC_FETCH_SUB
+
 // clang-format off
-inline __device__                int device_atomic_fetch_add(               int* ptr,                int val, MemoryOrderRelaxed, MemoryScopeDevice) { return atomicAdd(ptr,  val); }
-inline __device__       unsigned int device_atomic_fetch_add(      unsigned int* ptr,       unsigned int val, MemoryOrderRelaxed, MemoryScopeDevice) { return atomicAdd(ptr,  val); }
-inline __device__ unsigned long long device_atomic_fetch_add(unsigned long long* ptr, unsigned long long val, MemoryOrderRelaxed, MemoryScopeDevice) { return atomicAdd(ptr,  val); }
-inline __device__              float device_atomic_fetch_add(             float* ptr,              float val, MemoryOrderRelaxed, MemoryScopeDevice) { return atomicAdd(ptr,  val); }
-inline __device__             double device_atomic_fetch_add(            double* ptr,             double val, MemoryOrderRelaxed, MemoryScopeDevice) { return atomicAdd(ptr,  val); }
-
-inline __device__                int device_atomic_fetch_sub(               int* ptr,                int val, MemoryOrderRelaxed, MemoryScopeDevice) { return atomicSub(ptr,  val); }
-inline __device__       unsigned int device_atomic_fetch_sub(      unsigned int* ptr,       unsigned int val, MemoryOrderRelaxed, MemoryScopeDevice) { return atomicSub(ptr,  val); }
-inline __device__ unsigned long long device_atomic_fetch_sub(unsigned long long* ptr, unsigned long long val, MemoryOrderRelaxed, MemoryScopeDevice) { return atomicAdd(ptr, -val); }
-inline __device__              float device_atomic_fetch_sub(             float* ptr,              float val, MemoryOrderRelaxed, MemoryScopeDevice) { return atomicAdd(ptr, -val); }
-inline __device__             double device_atomic_fetch_sub(            double* ptr,             double val, MemoryOrderRelaxed, MemoryScopeDevice) { return atomicAdd(ptr, -val); }
-
-inline __device__                int device_atomic_fetch_min(               int* ptr,                int val, MemoryOrderRelaxed, MemoryScopeDevice) { return atomicMin(ptr,  val); }
-inline __device__       unsigned int device_atomic_fetch_min(      unsigned int* ptr,       unsigned int val, MemoryOrderRelaxed, MemoryScopeDevice) { return atomicMin(ptr,  val); }
-inline __device__ unsigned long long device_atomic_fetch_min(unsigned long long* ptr, unsigned long long val, MemoryOrderRelaxed, MemoryScopeDevice) { return atomicMin(ptr,  val); }
-
-inline __device__                int device_atomic_fetch_max(               int* ptr,                int val, MemoryOrderRelaxed, MemoryScopeDevice) { return atomicMax(ptr,  val); }
-inline __device__       unsigned int device_atomic_fetch_max(      unsigned int* ptr,       unsigned int val, MemoryOrderRelaxed, MemoryScopeDevice) { return atomicMax(ptr,  val); }
-inline __device__ unsigned long long device_atomic_fetch_max(unsigned long long* ptr, unsigned long long val, MemoryOrderRelaxed, MemoryScopeDevice) { return atomicMax(ptr,  val); }
-
-inline __device__                int device_atomic_fetch_and(               int* ptr,                int val, MemoryOrderRelaxed, MemoryScopeDevice) { return atomicAnd(ptr,  val); }
-inline __device__       unsigned int device_atomic_fetch_and(      unsigned int* ptr,       unsigned int val, MemoryOrderRelaxed, MemoryScopeDevice) { return atomicAnd(ptr,  val); }
-inline __device__ unsigned long long device_atomic_fetch_and(unsigned long long* ptr, unsigned long long val, MemoryOrderRelaxed, MemoryScopeDevice) { return atomicAnd(ptr,  val); }
-
-inline __device__                int device_atomic_fetch_or (               int* ptr,                int val, MemoryOrderRelaxed, MemoryScopeDevice) { return atomicOr (ptr,  val); }
-inline __device__       unsigned int device_atomic_fetch_or (      unsigned int* ptr,       unsigned int val, MemoryOrderRelaxed, MemoryScopeDevice) { return atomicOr (ptr,  val); }
-inline __device__ unsigned long long device_atomic_fetch_or (unsigned long long* ptr, unsigned long long val, MemoryOrderRelaxed, MemoryScopeDevice) { return atomicOr (ptr,  val); }
-
-inline __device__                int device_atomic_fetch_xor(               int* ptr,                int val, MemoryOrderRelaxed, MemoryScopeDevice) { return atomicXor(ptr,  val); }
-inline __device__       unsigned int device_atomic_fetch_xor(      unsigned int* ptr,       unsigned int val, MemoryOrderRelaxed, MemoryScopeDevice) { return atomicXor(ptr,  val); }
-inline __device__ unsigned long long device_atomic_fetch_xor(unsigned long long* ptr, unsigned long long val, MemoryOrderRelaxed, MemoryScopeDevice) { return atomicXor(ptr,  val); }
-
 inline __device__                int device_atomic_fetch_inc(               int* ptr,                         MemoryOrderRelaxed, MemoryScopeDevice) { return atomicAdd(ptr, 1   ); }
 inline __device__       unsigned int device_atomic_fetch_inc(      unsigned int* ptr,                         MemoryOrderRelaxed, MemoryScopeDevice) { return atomicAdd(ptr, 1u  ); }
 inline __device__ unsigned long long device_atomic_fetch_inc(unsigned long long* ptr,                         MemoryOrderRelaxed, MemoryScopeDevice) { return atomicAdd(ptr, 1ull); }
@@ -81,17 +104,6 @@ inline __device__       unsigned int device_atomic_fetch_dec_mod(  unsigned int*
 #define DESUL_IMPL_HIP_DEVICE_ATOMIC_FETCH_OP_FLOATING_POINT(OP) \
   DESUL_IMPL_HIP_DEVICE_ATOMIC_FETCH_OP(OP, float)               \
   DESUL_IMPL_HIP_DEVICE_ATOMIC_FETCH_OP(OP, double)
-
-DESUL_IMPL_HIP_DEVICE_ATOMIC_FETCH_OP_INTEGRAL(min)
-DESUL_IMPL_HIP_DEVICE_ATOMIC_FETCH_OP_INTEGRAL(max)
-DESUL_IMPL_HIP_DEVICE_ATOMIC_FETCH_OP_INTEGRAL(and)
-DESUL_IMPL_HIP_DEVICE_ATOMIC_FETCH_OP_INTEGRAL(or)
-DESUL_IMPL_HIP_DEVICE_ATOMIC_FETCH_OP_INTEGRAL(xor)
-
-DESUL_IMPL_HIP_DEVICE_ATOMIC_FETCH_OP_FLOATING_POINT(add)
-DESUL_IMPL_HIP_DEVICE_ATOMIC_FETCH_OP_INTEGRAL(add)
-DESUL_IMPL_HIP_DEVICE_ATOMIC_FETCH_OP_FLOATING_POINT(sub)
-DESUL_IMPL_HIP_DEVICE_ATOMIC_FETCH_OP_INTEGRAL(sub)
 
 DESUL_IMPL_HIP_DEVICE_ATOMIC_FETCH_OP_INTEGRAL(inc)
 DESUL_IMPL_HIP_DEVICE_ATOMIC_FETCH_OP_INTEGRAL(dec)
