@@ -90,31 +90,24 @@ DESUL_IMPL_HIP_ATOMIC_FETCH_INC(unsigned long long)
 
 #undef DESUL_IMPL_HIP_ATOMIC_FETCH_INC
 
-// clang-format off
-inline __device__       unsigned int device_atomic_fetch_inc_mod(  unsigned int* ptr,       unsigned int val, MemoryOrderRelaxed, MemoryScopeDevice) { return atomicInc(ptr,  val); }
-inline __device__       unsigned int device_atomic_fetch_dec_mod(  unsigned int* ptr,       unsigned int val, MemoryOrderRelaxed, MemoryScopeDevice) { return atomicDec(ptr,  val); }
-// clang-format on
-
-#define DESUL_IMPL_HIP_DEVICE_ATOMIC_FETCH_OP(OP, TYPE)                                \
+#define DESUL_IMPL_HIP_ATOMIC_FETCH_INC_MOD(MEMORY_SCOPE, MEMORY_SCOPE_STRING_LITERAL) \
   template <class MemoryOrder>                                                         \
-  __device__ TYPE device_atomic_fetch_##OP(                                            \
-      TYPE* ptr, TYPE val, MemoryOrder, MemoryScopeDevice) {                           \
-    __threadfence();                                                                   \
-    TYPE return_val =                                                                  \
-        device_atomic_fetch_##OP(ptr, val, MemoryOrderRelaxed(), MemoryScopeDevice()); \
-    __threadfence();                                                                   \
-    return return_val;                                                                 \
+  __device__ inline T device_atomic_fetch_inc_mod(T* ptr, MemoryOrder, MEMORY_SCOPE) { \
+    return __builtin_amdgcn_atomic_inc32(                                              \
+        ptr, val, HIPMemoryOrder<MemoryOrder>::value, MEMORY_SCOPE_STRING_LITERAL);    \
   }                                                                                    \
   template <class MemoryOrder>                                                         \
-  __device__ TYPE device_atomic_fetch_##OP(                                            \
-      TYPE* ptr, TYPE val, MemoryOrder, MemoryScopeCore) {                             \
-    return device_atomic_fetch_##OP(ptr, val, MemoryOrder(), MemoryScopeDevice());     \
+  __device__ inline T device_atomic_fetch_dec_mod(T* ptr, MemoryOrder, MEMORY_SCOPE) { \
+    return __builtin_amdgcn_atomic_dec32(                                              \
+        ptr, val, HIPMemoryOrder<MemoryOrder>::value, MEMORY_SCOPE_STRING_LITERAL);    \
   }
 
-DESUL_IMPL_HIP_DEVICE_ATOMIC_FETCH_OP(inc_mod, unsigned int)
-DESUL_IMPL_HIP_DEVICE_ATOMIC_FETCH_OP(dec_mod, unsigned int)
+DESUL_IMPL_HIP_ATOMIC_FETCH_INC_MOD(MemoryScopeCore, "workgroup")
+DESUL_IMPL_HIP_ATOMIC_FETCH_INC_MOD(MemoryScopeDevice, "agent")
+DESUL_IMPL_HIP_ATOMIC_FETCH_INC_MOD(MemoryScopeNode, "")
+DESUL_IMPL_HIP_ATOMIC_FETCH_INC_MOD(MemoryScopeSystem, "")
 
-#undef DESUL_IMPL_HIP_DEVICE_ATOMIC_FETCH_OP
+#undef DESUL_IMPL_HIP_ATOMIC_FETCH_INC_MOD
 
 }  // namespace Impl
 }  // namespace desul
